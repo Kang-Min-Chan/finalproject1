@@ -1,15 +1,9 @@
 import React from "react";
 
-function pct(v) {
-  const n = Math.max(0, Math.min(1, Number(v) || 0));
-  return `${Math.round(n * 100)}%`;
-}
-
 export default function ResultCard({ result }) {
   const {
     category = "알 수 없음",
     bin = "확인 필요",
-    confidence = 0,
     howto = [],
     cautions = [],
   } = result || {};
@@ -20,18 +14,14 @@ export default function ResultCard({ result }) {
         <div>
           <div className="resultKicker">분류 결과</div>
           <div className="resultTitle">{category}</div>
+
           <div className="resultBin">
             <span className="pill strong">버릴 곳: {bin}</span>
-            <span className="pill">신뢰도: {pct(confidence)}</span>
           </div>
-        </div>
-
-        <div className="meter" title={`confidence ${pct(confidence)}`}>
-          <div className="meterBar" style={{ width: pct(confidence) }} />
         </div>
       </div>
 
-      {/* 결과 영역 최소 높이로 레이아웃 균형 */}
+      {/* 결과 영역 */}
       <div className="resultGrid resultGridTall">
         <div className="box">
           <div className="boxTitle">버리는 방법</div>
