@@ -46,6 +46,7 @@ export async function sendToGemini(detections) {
 - 반드시 "아래 JSON만" 출력한다. 다른 문장/설명/코드펜스(\\\`\\\`\\\`) 절대 금지.
 - howto/cautions는 각각 2~4개 문장으로 작성(너무 짧지 않게).
 - 애매하면 "확인 필요"를 사용.
+- category 값은 반드시: "종이류"|"종이박스"|"유리"|"캔류/고철"|"플라스틱"|"일반쓰레기" 중 하나만 사용
 
 출력(JSON만):
 {

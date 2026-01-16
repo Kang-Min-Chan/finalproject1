@@ -71,22 +71,27 @@ export default function App() {
     // 예: data.llm = { category: "종이류", howto:[...], cautions:[...] }
     const llm = data?.llm && typeof data.llm === "object" ? data.llm : null;
 
+    // ✅ LLM howto/cautions
+    const llmHowto = Array.isArray(llm?.howto) ? llm.howto : [];
+    const llmCautions = Array.isArray(llm?.cautions) ? llm.cautions : [];
+
+    // ✅ fallback (LLM이 없거나 형식이 깨졌을 때)
+    const fallbackHowto = ["분리배출 안내를 생성하지 못했어요. 다시 시도해주세요."];
+
     if (!dets.length) {
       return {
-        category: llm?.category ?? "알 수 없음",
+        category: "알 수 없음",
         bin: "확인 필요",
         confidence: 0,
         reasons: ["감지된 객체가 없어요."],
-        howto: Array.isArray(llm?.howto) ? llm.howto : ["다른 각도/조명으로 다시 촬영해보세요."],
-        cautions: Array.isArray(llm?.cautions) ? llm.cautions : [],
+        howto: llmHowto.length ? llmHowto : ["다른 각도/조명으로 다시 촬영해보세요."],
+        cautions: llmCautions, // ✅ YOLO 감지 로그 제거
         raw: data,
       };
     }
 
     // ✅ 신뢰도 높은 순으로 정렬
-    const sorted = [...dets].sort(
-      (a, b) => (b.confidence ?? 0) - (a.confidence ?? 0)
-    );
+    const sorted = [...dets].sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0));
 
     // ✅ 중복 라벨 제거 (복합 쓰레기 판단)
     const uniqueLabels = [...new Set(sorted.map((d) => d.label).filter(Boolean))];
@@ -97,21 +102,9 @@ export default function App() {
     const mainLabel = main?.label ?? "unknown";
     const mainConf = Number(main?.confidence ?? 0);
 
-    // ✅ LLM에서 howto/cautions를 분리해서 받기
-    const llmHowto = Array.isArray(llm?.howto) ? llm.howto : [];
-    const llmCautions = Array.isArray(llm?.cautions) ? llm.cautions : [];
-
-    // ✅ fallback (LLM이 없거나 형식이 깨졌을 때)
-    const fallbackHowto = [
-      "분리배출 안내를 생성하지 못했어요. 다시 시도해주세요.",
-    ];
-
-    // ✅ ResultCard가 쓰기 좋은 형태로 변환
     return {
-      // category: 복합이면 "복합 쓰레기", 아니면 LLM category 우선 → 없으면 한글 라벨
-      category: isMixed
-        ? "복합 쓰레기"
-        : (llm?.category ?? (LABEL_KO[mainLabel] ?? mainLabel)),
+      // ✅ 분류 결과는 YOLO 기준으로 고정 (LLM이 종이팩이라 해도 안 뜸)
+      category: isMixed ? "복합 쓰레기" : (LABEL_KO[mainLabel] ?? mainLabel),
 
       // bin: 복합이면 분리 후 배출, 단일이면 BIN_MAP
       bin: isMixed ? "분리 후 각각 배출" : (BIN_MAP[mainLabel] ?? "확인 필요"),
@@ -128,7 +121,7 @@ export default function App() {
           : "이미지 특징을 바탕으로 분류되었어요.",
       ],
 
-      // ✅ 핵심: 버리는 방법 / 주의사항을 분리해서 넣기
+      // ✅ 버리는 방법: LLM howto
       howto: isMixed
         ? [
             `감지된 재질: ${uniqueLabels.map((l) => LABEL_KO[l] ?? l).join(", ")}`,
@@ -137,16 +130,8 @@ export default function App() {
           ]
         : (llmHowto.length ? llmHowto : fallbackHowto),
 
-      // ✅ cautions에는 LLM cautions + YOLO 감지 로그 같이 붙이기
-      cautions: [
-        ...(llmCautions.length ? llmCautions : []),
-        ...sorted.map(
-          (d) =>
-            `YOLO 감지: ${LABEL_KO[d.label] ?? d.label} (${(
-              Number(d.confidence ?? 0) * 100
-            ).toFixed(1)}%)`
-        ),
-      ],
+      // ✅ 주의사항: LLM cautions만 (YOLO 감지 로그 제거)
+      cautions: llmCautions,
 
       raw: data, // 디버깅용
     };
@@ -211,19 +196,13 @@ export default function App() {
               <img className="preview" src={previewUrl} alt="preview" />
               <div className="previewMeta">
                 <span className="pill">{file?.name}</span>
-                <span className="pill">
-                  {Math.round((file?.size || 0) / 1024)} KB
-                </span>
+                <span className="pill">{Math.round((file?.size || 0) / 1024)} KB</span>
               </div>
             </div>
           )}
 
           <div className="actions">
-            <button
-              className="btn"
-              onClick={onSubmit}
-              disabled={!canSubmit || loading}
-            >
+            <button className="btn" onClick={onSubmit} disabled={!canSubmit || loading}>
               {loading ? "분류 중..." : "분리수거 판별하기"}
             </button>
             <button className="btn ghost" onClick={resetAll} disabled={loading}>
@@ -232,8 +211,8 @@ export default function App() {
           </div>
 
           <div className="note">
-            <b>TIP</b> 라벨/로고/재질이 보이게 찍으면 정확도가 올라가요.
-            (예: PET, PP, 종이, 비닐)
+            <b>TIP</b> 라벨/로고/재질이 보이게 찍으면 정확도가 올라가요. (예: PET, PP,
+            종이, 비닐)
           </div>
         </section>
 
